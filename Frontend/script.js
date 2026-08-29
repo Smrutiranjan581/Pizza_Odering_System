@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api";
+const API_URL = "";
 window.googleMapsReady=false;
 window.initPizzaHouseGoogleMaps=function(){
   window.googleMapsReady=true;
@@ -1156,7 +1156,7 @@ async function signupUser() {
   }
 
   try {
-    const response = await fetch(`${API_URL}/signup`, {
+    const response = await fetch(`${API_URL}/api/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1223,7 +1223,7 @@ async function loginUser() {
 
   try {
 
-    const response = await fetch(`${API_URL}/login`, {
+    const response = await fetch(`${API_URL}/api/login`, {
       method: "POST",
 
       headers: {
