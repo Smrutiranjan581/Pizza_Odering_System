@@ -1,4 +1,4 @@
-const API_URL = "https://pizza-odering-system.onrender.com/api";
+const API_URL = "https://pizza-odering-system.onrender.com";
 window.googleMapsReady=false;
 window.initPizzaHouseGoogleMaps=function(){
   window.googleMapsReady=true;
