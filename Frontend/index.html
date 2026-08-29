@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pizza House — Wood-Fired, Doorstep-Delivered</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+// ---------------- Track Order with Live Map ----------------
+let deliveryMapInstance=null;
+let deliveryMarker=null;
+let customerMarker=null;
+let deliveryTimer=null;
+
+function openTrackOrder(){
+  document.getElementById('accountMenu')?.classList.add('hidden');
+  const overlay=document.getElementById('trackOrderOverlay');
+  const input=document.getElementById('trackOrderInput');
+  const msg=document.getElementById('trackOrderMsg');
+  const result=document.getElementById('trackOrderResult');
+
+  if(msg) msg.textContent='';
+  if(result) result.classList.add('hidden');
+  if(input) input.value=localStorage.getItem('pizzaHouseLastOrderId') || '';
+  overlay?.classList.remove('hidden');
+  setTimeout(()=>input?.focus(),100);
+}
+
+function closeTrackOrder(){
+  document.getElementById('trackOrderOverlay')?.classList.add('hidden');
+  if(deliveryTimer){ clearInterval(deliveryTimer); deliveryTimer=null; }
+}
+
+function trackOrder(){
+  const input=document.getElementById('trackOrderInput');
+  const msg=document.getElementById('trackOrderMsg');
+  const result=document.getElementById('trackOrderResult');
+  const orderId=(input?.value || '').trim().toUpperCase();
+  const savedOrderId=(localStorage.getItem('pizzaHouseLastOrderId') || '').trim().toUpperCase();
+
+  if(msg) msg.textContent='';
+  if(result) result.classList.add('hidden');
+
+  if(!orderId){
+    if(msg) msg.textContent='Please enter your Order ID.';
+    return;
+  }
+
+  // Only the customer's real saved order ID is valid.
+  if(!savedOrderId || orderId !== savedOrderId){
+    if(msg) msg.textContent='❌ Invalid Order ID. Please enter a valid Order ID.';
+    return;
+  }
+
+  document.getElementById('trackOrderIdText').textContent=orderId;
+  document.getElementById('trackOrderStatus').textContent='🛵 Out for Delivery';
+  document.getElementById('deliveryState').textContent='Out for Delivery';
+  document.getElementById('trackOrderDetails').textContent='Your delivery partner is on the way.';
+  result?.classList.remove('hidden');
+
+  setTimeout(()=>{
+    const mapEl=document.getElementById('deliveryMap');
+    if(!(window.google && google.maps)){
+      mapEl.innerHTML='<div style="padding:25px;text-align:center;">Google Map could not load. Please check your API settings.</div>';
+      return;
+    }
+
+    mapEl.innerHTML='';
+    googleDeliveryMap=new google.maps.Map(mapEl,{
+      center:demoCustomerLocation,
+      zoom:12,
+      mapTypeControl:false,
+      streetViewControl:false
+    });
+
+    googleCustomerMarker=new google.maps.Marker({
+      position:demoCustomerLocation,
+      map:googleDeliveryMap,
+      title:'Your Location'
+    });
+
+    googleDeliveryMarker=new google.maps.Marker({
+      position:demoRiderLocation,
+      map:googleDeliveryMap,
+      title:'Delivery Partner'
+    });
+
+    const distance=getGoogleDistanceKm();
+    const eta=Math.max(1,Math.ceil(distance/0.35));
+    document.getElementById('distanceLeft').textContent=distance.toFixed(1)+' km';
+    document.getElementById('deliveryEta').textContent=eta+' min';
+
+    googleDeliveryMap.fitBounds(new google.maps.LatLngBounds(
+      new google.maps.LatLng(demoRiderLocation),
+      new google.maps.LatLng(demoCustomerLocation)
+    ));
+  },150);
+}
+
+// Show tracking card whenever page loads if the customer already has an order.
+window.addEventListener('DOMContentLoaded',showHomeTrackingAfterOrder);
+
+// Make checkout flows automatically create a trackable order ID when possible.
+const oldShowToast = window.showToast;
+function createTrackableOrder(){
+  if(!localStorage.getItem('pizzaHouseLastOrderId')){
+    const id='PH'+Date.now().toString().slice(-6);
+    localStorage.setItem('pizzaHouseLastOrderId',id);
+    localStorage.setItem('pizzaHouseLastOrderStatus','Order Confirmed');
+  }
+  showHomeTrackingAfterOrder();
+}
+
+
+// Final home-page tracking initialization.
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    if(typeof showHomeTrackingAfterOrder==='function') showHomeTrackingAfterOrder();
+  },500);
+});
+
+</script>
+<!-- Google Maps API: Replace AIzaSyDop6He3RiDrMQQlG4t3VGTjABmkoaHIqo with your real key -->
+
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="logo"><span class="logo-mark">🍕</span> Pizza House</div>
+    <nav class="nav-links">
+      <a href="#home" onclick="showPage('home')">Home</a>
+      <a href="#menu" onclick="showPage('home');setTimeout(()=>scrollToSection('menu'),0)">Menu</a>
+      <a href="#offers" onclick="showPage('home');setTimeout(()=>scrollToSection('offers'),0)">Offers</a>
+      <a href="#about" onclick="showPage('home');setTimeout(()=>scrollToSection('about'),0)">About Us</a>
+      <a href="#contact" onclick="showPage('home');setTimeout(()=>scrollToSection('contact'),0)">Contact</a>
+    </nav>
+    <div class="nav-right">
+      <button class="icon-btn" onclick="openCart()" aria-label="Cart">🛒<span class="cart-count" id="cartCount">0</span></button>
+      <div class="account-wrap" id="accountWrap">
+        <button class="btn btn-dark account-btn" style="padding:10px 20px;font-size:13px;" id="authNavBtn">Login / Sign Up</button>
+        <div class="account-menu hidden" id="accountMenu">
+          <div class="account-menu-title">My Account</div>
+          <div class="account-user" id="accountUserName"></div>
+          <button class="account-order-train" onclick="openTrainOrder()">🚆 Order on Train</button>
+          <button class="account-track-order" onclick="openTrackOrder()">📦 Track Order</button>
+          <button class="account-my-orders" onclick="showMyOrders()">📜 My Orders</button>
+          <button class="account-logout" onclick="logoutUser()">Log Out</button>
+        </div>
+      </div>
+      <button class="mobile-toggle" onclick="document.querySelector('.nav-links').classList.toggle('mobile-open')">☰</button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= HOME PAGE ================= -->
+<div id="page-home">
+
+  <section class="hero" id="home">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">Wood-fired · Made fresh · 30 min</p>
+        <h1>Delicious pizza,<br><em>delivered</em> to your door.</h1>
+        <p>Hand-stretched dough, San Marzano tomatoes, and a wood-fired oven — order your favourite pizza and track every step from oven to doorstep.</p>
+        <div class="hero-ctas">
+          <button class="btn btn-tomato" onclick="scrollToSection('menu')">🍕 Order Now</button>
+          <button class="btn btn-outline" onclick="scrollToSection('offers')">View Offers</button>
+        </div>
+        <div class="hero-stats">
+          <div><b>4.8★</b><span>12k+ ratings</span></div>
+          <div><b>30 min</b><span>avg delivery</span></div>
+          <div><b>24</b><span>pizzas on menu</span></div>
+        </div>
+      </div>
+      <div class="pizza-stage">
+        <div class="pizza-plate">
+          <div class="pizza-crust" id="heroPizza"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="menu">
+    <div class="wrap">
+      <p class="eyebrow">The Menu</p>
+      <h2 class="section-title">Pick your pizza</h2>
+      <p class="section-sub">Every pie is made to order — customise the size, crust and toppings before it goes in the oven.</p>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="searchInput" placeholder="Search pizzas — try 'paneer' or 'margherita'" oninput="renderMenu()">
+        </div>
+        <button class="filter-chip active" data-filter="all" onclick="setFilter('all',this)">All</button>
+        <button class="filter-chip" data-filter="veg" onclick="setFilter('veg',this)">🟢 Veg</button>
+        <button class="filter-chip" data-filter="nonveg" onclick="setFilter('nonveg',this)">🔴 Non-Veg</button>
+        <button class="filter-chip" onclick="setCategory('sides',this)">🥖 Sides</button>
+        <button class="filter-chip" onclick="setCategory('beverages',this)">🥤 Beverages</button>
+        <button class="filter-chip" onclick="setCategory('desserts',this)">🍫 Desserts</button>
+      </div>
+
+      
+    <div class="menu-grid" id="menuGrid"></div>
+    </div>
+  </section>
+
+  <section class="offers" id="offers">
+    <div class="wrap">
+      <p class="eyebrow" style="color:var(--gold)">Offers</p>
+      <h2 class="section-title">Deals worth ordering for</h2>
+      <p class="section-sub">Enjoy our latest Pizza House deals with your order.</p>
+
+      <div class="offer-grid">
+        <div class="offer-card">
+          <span class="emoji">🍕</span>
+          <h4>Buy 1 Get 1 Free</h4>
+          <p>Order any pizza and get a second pizza free. Add a pizza to your cart to unlock this offer.</p>
+          <button class="btn btn-tomato" style="margin-top:14px;" onclick="applyBuy1Get1()">Add Free Pizza</button>
+        </div>
+
+        <div class="offer-card">
+          <span class="emoji">🧄</span>
+          <h4>Free Garlic Bread</h4>
+          <p>Get Garlic Bread FREE when your cart reaches ₹499 or more.</p>
+          <button class="btn btn-tomato" style="margin-top:14px;" onclick="applyFreeGarlicBread()">Add Free Garlic Bread</button>
+        </div>
+
+        <div class="offer-card">
+          <span class="emoji">🍕🥤</span>
+          <h4>Duo Deal</h4>
+          <p>2 Medium Pizzas + 2 Cold Drinks</p>
+          <div class="price" style="margin-top:10px;">₹399</div>
+          <button class="btn btn-tomato" style="margin-top:14px;" onclick="addCombo('combo1')">Add Combo</button>
+        </div>
+
+        <div class="offer-card">
+          <span class="emoji">👨‍👩‍👧</span>
+          <h4>Family Feast</h4>
+          <p>2 Large Pizzas + Garlic Bread + 1L Soft Drink</p>
+          <div class="price" style="margin-top:10px;">₹699</div>
+          <button class="btn btn-tomato" style="margin-top:14px;" onclick="addCombo('combo2')">Add Combo</button>
+        </div>
+
+        <div class="offer-card">
+          <span class="emoji">🔥</span>
+          <h4>Party Combo</h4>
+          <p>4 Medium Pizzas + 2 Garlic Bread + 2L Soft Drink</p>
+          <div class="price" style="margin-top:10px;">₹999</div>
+          <button class="btn btn-tomato" style="margin-top:14px;" onclick="addCombo('combo3')">Add Combo</button>
+        </div>
+
+        <div class="offer-card">
+          <span class="emoji">💑</span>
+          <h4>Couple Combo</h4>
+          <p>1 Large Pizza + Garlic Bread + 2 Drinks</p>
+          <div class="price" style="margin-top:10px;">₹499</div>
+          <button class="btn btn-tomato" style="margin-top:14px;" onclick="addCombo('combo4')">Add Combo</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about">
+    <div class="wrap" style="max-width:760px;">
+      <p class="eyebrow">About Us</p>
+      <h2 class="section-title">Baked the old way, ordered the new way</h2>
+      <p class="section-sub" style="max-width:none;">Pizza House started as a single wood-fired oven in a corner kitchen. Today we still stretch every dough ball by hand and bake in real wood-fired ovens — we've just made it easier to get one delivered to you, hot, in about 30 minutes.</p>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="wrap" style="max-width:600px;">
+      <p class="eyebrow">Contact</p>
+      <h2 class="section-title">Get in touch</h2>
+      <p class="section-sub" style="max-width:none;">📞 +91 98765 43210 &nbsp;·&nbsp; 📧 hello@pizzahouse.example &nbsp;·&nbsp; 📍 Rourkela, Odisha</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ================= CHECKOUT PAGE ================= -->
+<div id="page-checkout" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">Checkout</p>
+    <h2 class="section-title" style="margin-bottom:34px;">Almost there 🍕</h2>
+    <div class="checkout-grid">
+      <div>
+        <div class="form-card" style="margin-bottom:22px;">
+          <h3>Your details</h3>
+          <p class="hint">We'll use these to confirm and deliver your order.</p>
+          <div class="field" id="f-name">
+            <label>Full Name</label>
+            <input type="text" id="in-name" placeholder="e.g. Priya Sharma">
+            <div class="field-error">Please enter your full name.</div>
+          </div>
+          <div class="field" id="f-mobile">
+            <label>Mobile Number</label>
+            <input type="tel" id="in-mobile" placeholder="10-digit mobile number">
+            <div class="field-error">Enter a valid 10-digit mobile number.</div>
+          </div>
+          <div class="field" id="f-email">
+            <label>Email</label>
+            <input type="email" id="in-email" placeholder="you@example.com">
+            <div class="field-error">Enter a valid email address.</div>
+          </div>
+          <div class="field" id="f-address">
+            <label>Delivery Address</label>
+            <textarea id="in-address" rows="3" placeholder="House no, street, area, city"></textarea>
+            <div class="field-error">Please enter your delivery address.</div>
+          </div>
+        </div>
+
+        <div class="form-card" style="margin-bottom:22px;">
+          <h3>Delivery option</h3>
+          <p class="hint">Delivery is ₹99 below ₹599; FREE on ₹599+ orders.</p>
+          <div class="choice-grid">
+            <div class="choice-card" data-delivery="home" onclick="selectDelivery('home',this)"><span class="ic">🏠</span>Home Delivery</div>
+            <div class="choice-card" data-delivery="pickup" onclick="selectDelivery('pickup',this)"><span class="ic">🏪</span>Self Pickup</div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3>Payment option</h3>
+          <p class="hint">Pick how you'd like to pay for this order.</p>
+          <div class="pay-grid">
+            <label class="pay-opt" data-pay="upi"><input type="radio" name="pay" onclick="selectPay('upi',this)"> UPI — PhonePe, Paytm, Google Pay, Navi, BHIM</label>
+            <label class="pay-opt" data-pay="card"><input type="radio" name="pay" onclick="selectPay('card',this)"> Credit / Debit Card</label>
+            <label class="pay-opt" data-pay="cod"><input type="radio" name="pay" onclick="selectPay('cod',this)"> Cash on Delivery</label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="ticket">
+          <div class="ticket-inner">
+            <div class="ticket-head"><div class="brand">Pizza House</div><small>ORDER SUMMARY</small></div>
+            <div id="checkoutLines"></div>
+            <div style="margin-top:14px;">
+              <div class="sum-row"><span>Subtotal</span><span id="co-subtotal">₹0</span></div>
+              <div class="sum-row" id="co-discount-row"><span>Discount</span><span id="co-discount">-₹0</span></div>
+              <div class="sum-row"><span>Delivery</span><span id="co-delivery">₹0</span></div>
+              <div class="sum-row"><span>Platform Fee</span><span id="co-platform">₹5</span></div>
+              <div class="sum-row"><span>CGST (4%)</span><span id="co-cgst">₹0</span></div>
+              <div class="sum-row"><span>SGST (4%)</span><span id="co-sgst">₹0</span></div>
+              <div style="font-size:11px;color:#8a7a70;margin-top:4px;">Free delivery on orders ₹599+</div>
+              <div class="sum-row total"><span>TOTAL</span><span id="co-total">₹0</span></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-tomato" style="width:100%;justify-content:center;margin-top:18px;padding:16px;font-size:15px;" onclick="placeOrder()">Place Order 🔥</button>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;" onclick="showPage('home')">← Back to menu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CONFIRMATION PAGE ================= -->
+<div id="page-confirm" class="page hidden">
+  <div class="wrap" style="max-width:480px;">
+    <div class="confirm-hero">
+      <div class="big-check">✓</div>
+      <h2 class="section-title" style="margin-bottom:6px;">Order placed successfully!</h2>
+      <p class="section-sub" style="margin:0 auto;">Sit tight — your pizza is on its way to the kitchen.</p>
+    </div>
+    <div class="ticket">
+      <div class="ticket-inner" style="text-align:center;">
+        <div class="ticket-head"><div class="brand">Pizza House</div><small id="confirmOrderId">ORDER #PZ1000</small></div>
+        <div class="sum-row"><span>Estimated Delivery</span><span>30–40 min</span></div>
+        <div class="sum-row total" style="border-top:none;"><span>Total Amount</span><span id="confirmTotal">₹0</span></div>
+      </div>
+    </div>
+    <button class="btn btn-tomato" style="width:100%;justify-content:center;margin-top:20px;padding:16px;" onclick="showPage('track')">Track Order 🚚</button>
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;" onclick="startNewOrder()">Back to Home</button>
+  </div>
+</div>
+
+<!-- ================= TRACKING PAGE ================= -->
+<div id="page-track" class="page hidden">
+  <div class="wrap" style="max-width:480px;">
+    <p class="eyebrow" style="justify-content:center;">Live Status</p>
+    <h2 class="section-title" style="text-align:center;">Tracking <span id="trackOrderId">#PZ1000</span></h2>
+    <p class="section-sub" style="margin:0 auto 34px;text-align:center;">We'll move through each step automatically — just like a real kitchen ticket.</p>
+    <div class="tracker" id="trackerSteps"></div>
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:30px;" onclick="startNewOrder()">Place a New Order</button>
+  </div>
+</div>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo">🍕 Pizza House</div>
+        <p>Wood-fired pizza, hand-stretched daily and delivered hot to your door in about 30 minutes.</p>
+        <div class="social-row">
+          <a href="#" aria-label="Instagram">📷</a>
+          <a href="#" aria-label="Facebook">📘</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h5>Contact</h5>
+        <p>📞 +91 98765 43210</p>
+        <p>📧 hello@pizzahouse.example</p>
+        <p>📍 Rourkela, Odisha</p>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <a href="#about" onclick="showPage('home')">About Us</a>
+        <a href="#menu" onclick="showPage('home')">Menu</a>
+        <a href="#offers" onclick="showPage('home')">Offers</a>
+      </div>
+      <div class="footer-col">
+        <h5>Legal</h5>
+        <a href="#" onclick="showToast('Terms — coming soon')">Terms &amp; Conditions</a>
+        <a href="#" onclick="showToast('Privacy — coming soon')">Privacy Policy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Pizza House. All rights reserved.</span>
+      <span>Made with 🍕 in Rourkela</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ================= CUSTOMIZE MODAL ================= -->
+<div class="overlay hidden" id="customizeOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeCustomize()">✕</button>
+    <h3 id="cz-name">Pizza Name</h3>
+    <p class="sub" id="cz-desc">Description</p>
+
+    <div class="option-group">
+      <h4>Size</h4>
+      <div id="cz-sizes"></div>
+    </div>
+    <div class="option-group">
+      <h4>Crust</h4>
+      <div id="cz-crusts"></div>
+    </div>
+    <div class="option-group">
+      <h4>Extras</h4>
+      <div id="cz-extras"></div>
+    </div>
+
+    <div class="qty-row">
+      <span style="font-weight:600;font-size:14px;">Quantity</span>
+      <div class="qty-control">
+        <button onclick="changeCzQty(-1)">−</button>
+        <span id="cz-qty">1</span>
+        <button onclick="changeCzQty(1)">+</button>
+      </div>
+    </div>
+
+    <div class="modal-total"><span>Total</span><span id="cz-total">₹0</span></div>
+    <button class="btn btn-tomato" style="width:100%;justify-content:center;padding:15px;" onclick="confirmAddToCart()">Add to Cart</button>
+  </div>
+</div>
+
+
+<!-- ================= LOGIN / SIGN UP MODAL ================= -->
+<div class="overlay hidden" id="loginOverlay">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeLoginModal()">✕</button>
+    <h3 id="authTitle">Welcome Back 👋</h3>
+    <p class="sub" id="authSub">Login to continue ordering your favourite pizza.</p>
+
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" id="authName" placeholder="Enter your full name">
+    </div>
+    <div class="field">
+      <label>Mobile Number</label>
+      <input type="tel" id="authMobile" placeholder="10-digit mobile number">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="authEmail" placeholder="you@example.com">
+    </div>
+
+    <button class="btn btn-tomato" style="width:100%;justify-content:center;padding:15px;" onclick="handleAuth()" id="authBtn">Login</button>
+    <p style="text-align:center;font-size:13px;color:#7a685f;margin:16px 0 0;">
+      <span id="authSwitchText">New here?</span>
+      <button type="button" onclick="toggleAuthMode()" style="background:none;border:none;color:var(--tomato);font-weight:700;cursor:pointer;padding:0 4px;" id="authSwitchBtn">Sign Up</button>
+    </p>
+  </div>
+</div>
+
+
+<!-- ================= LOGIN / SIGN UP MODAL ================= -->
+<div class="overlay hidden" id="authOverlay">
+  <div class="modal auth-modal">
+    <button class="modal-close" onclick="closeAuth()">✕</button>
+
+    <div id="authLoginView">
+      <h3>Welcome back 👋</h3>
+      <p class="sub">Login to your Pizza House account.</p>
+
+      <div class="field">
+        <label>Gmail</label>
+        <input type="email" id="loginEmail" placeholder="example@gmail.com">
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input type="password" id="loginPassword" placeholder="Enter your password">
+          <button type="button" class="show-pass" onclick="togglePassword('loginPassword',this)">Show</button>
+        </div>
+      </div>
+
+      <div class="auth-error" id="loginMsg"></div>
+
+      <button class="btn btn-tomato" style="width:100%;justify-content:center;margin-top:12px;" onclick="loginUser()">Login</button>
+
+      <button class="auth-link-btn" onclick="showForgotPassword()">Forgot Password?</button>
+
+      <p class="auth-switch">Don't have an account?
+        <button onclick="showSignup()">Sign Up</button>
+      </p>
+    </div>
+
+    <div id="authSignupView" class="hidden">
+      <h3>Create Account 🍕</h3>
+      <p class="sub">Sign up and start ordering your favourite pizza.</p>
+
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="signupName" placeholder="Enter your full name">
+      </div>
+
+      <div class="field">
+        <label>Mobile Number</label>
+        <input type="tel" id="signupMobile" placeholder="10-digit mobile number" maxlength="10">
+      </div>
+
+      <div class="field">
+        <label>Gmail</label>
+        <input type="email" id="signupEmail" placeholder="example@gmail.com">
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input type="password" id="signupPassword" placeholder="Create a strong password" oninput="checkPasswordStrength()">
+          <button type="button" class="show-pass" onclick="togglePassword('signupPassword',this)">Show</button>
+        </div>
+
+        <div class="password-rules">
+          <div id="ruleLength">○ Minimum 8 characters</div>
+          <div id="ruleUpper">○ At least 1 uppercase letter (A-Z)</div>
+          <div id="ruleLower">○ At least 1 lowercase letter (a-z)</div>
+          <div id="ruleNumber">○ At least 1 number (0-9)</div>
+          <div id="ruleSpecial">○ At least 1 special character (!@#$...)</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Confirm Password</label>
+        <div class="password-wrap">
+          <input type="password" id="confirmPassword" placeholder="Confirm your password">
+          <button type="button" class="show-pass" onclick="togglePassword('confirmPassword',this)">Show</button>
+        </div>
+      </div>
+
+      <div class="auth-error" id="signupMsg"></div>
+
+      <button class="btn btn-tomato" style="width:100%;justify-content:center;margin-top:12px;" onclick="signupUser()">Create Account</button>
+
+      <p class="auth-switch">Already have an account?
+        <button onclick="showLogin()">Login</button>
+      </p>
+    </div>
+
+    <div id="authForgotView" class="hidden">
+      <h3>Forgot Password 🔐</h3>
+      <p class="sub">Enter your registered email and set a new password.</p>
+
+      <div class="field">
+        <label>Registered Gmail</label>
+        <input type="email" id="forgotEmail" placeholder="example@gmail.com">
+      </div>
+
+      <div class="field">
+        <label>New Password</label>
+        <div class="password-wrap">
+          <input type="password" id="newPassword" placeholder="New strong password" oninput="checkNewPasswordStrength()">
+          <button type="button" class="show-pass" onclick="togglePassword('newPassword',this)">Show</button>
+        </div>
+        <div class="password-rules small-rules">
+          <div id="newRuleLength">○ Minimum 8 characters</div>
+          <div id="newRuleUpper">○ 1 uppercase letter</div>
+          <div id="newRuleLower">○ 1 lowercase letter</div>
+          <div id="newRuleNumber">○ 1 number</div>
+          <div id="newRuleSpecial">○ 1 special character</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Confirm New Password</label>
+        <div class="password-wrap">
+          <input type="password" id="confirmNewPassword" placeholder="Confirm new password">
+          <button type="button" class="show-pass" onclick="togglePassword('confirmNewPassword',this)">Show</button>
+        </div>
+      </div>
+
+      <div class="auth-error" id="forgotMsg"></div>
+
+      <button class="btn btn-tomato" style="width:100%;justify-content:center;margin-top:12px;" onclick="resetPassword()">Reset Password</button>
+
+      <p class="auth-switch"><button onclick="showLogin()">← Back to Login</button></p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ORDER ON TRAIN MODAL ================= -->
+<div class="overlay hidden" id="trainOrderOverlay">
+  <div class="modal" style="max-width:430px;">
+    <button class="modal-close" onclick="closeTrainOrder()">✕</button>
+    <h3>🚆 Order on Train</h3>
+    <p class="sub">Enter your train details and choose the station where you want to pick up your order.</p>
+
+    <div class="field">
+      <label>Train Number or Train Name</label>
+      <input type="text" id="trainSearchInput" placeholder="e.g. 12810 or Howrah Mail">
+    </div>
+
+    <div class="field">
+      <label>Pickup Station</label>
+      <input type="text" id="stationSearchInput" placeholder="e.g. Rourkela, Jharsuguda, Tatanagar">
+      <small style="display:block;margin-top:6px;color:#8a7a70;">Enter the station where you want to collect your food.</small>
+    </div>
+
+    <div class="auth-error" id="trainOrderMsg"></div>
+
+    <button class="btn btn-tomato" style="width:100%;justify-content:center;padding:15px;" onclick="continueTrainOrder()">
+      Select Station & Continue 🚆
+    </button>
+  </div>
+</div>
+
+<!-- ================= TRACK ORDER MODAL ================= -->
+<div class="overlay hidden" id="trackOrderOverlay">
+  <div class="modal" style="max-width:450px;">
+    <button class="modal-close" onclick="closeTrackOrder()">✕</button>
+    <h3>📦 Track Your Order</h3>
+    <p class="sub">Enter your Order ID to check the current status.</p>
+
+    <div class="field">
+      <label>Order ID</label>
+      <input type="text" id="trackOrderInput" placeholder="e.g. PH123456">
+    </div>
+
+    <div class="auth-error" id="trackOrderMsg"></div>
+
+    <button class="btn btn-tomato" style="width:100%;justify-content:center;padding:15px;" onclick="trackOrder()">
+      Track Order 📦
+    </button>
+
+    <div id="trackOrderResult" class="hidden" style="margin-top:18px;padding:16px;border-radius:12px;background:#fff8ef;border:1px solid #eadccf;">
+      <div style="font-weight:800;font-size:16px;">Order Status</div>
+      <div id="trackOrderIdText" style="font-size:12px;color:#7a685f;margin:5px 0 12px;"></div>
+      <div id="trackOrderStatus" style="font-weight:800;color:var(--tomato-deep);font-size:18px;"></div>
+      <div id="trackOrderDetails" style="font-size:13px;color:#6b5b52;margin-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MY ORDERS PAGE ================= -->
+
+<section id="myOrdersPage" class="page hidden">
+
+    <div class="container">
+
+        <h2>📜 My Orders</h2>
+
+        <p>View all your previous orders.</p>
+
+        <div id="orderHistoryList">
+            <p>Loading your orders...</p>
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ================= CART DRAWER ================= -->
+<div class="drawer-overlay hidden" id="drawerOverlay" onclick="closeCart()"></div>
+<div class="drawer hidden" id="cartDrawer">
+  <div class="drawer-head">
+    <h3>Your Cart 🛒</h3>
+    <button class="modal-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="ticket">
+    <div class="ticket-inner">
+      <div class="ticket-head"><div class="brand">Pizza House</div><small>KITCHEN TICKET</small></div>
+      <div id="cartLines"></div>
+      <div style="margin-top:14px;" id="cartSummary">
+        <div class="sum-row"><span>Subtotal</span><span id="dr-subtotal">₹0</span></div>
+        <div class="sum-row"><span>Discount</span><span id="dr-discount">-₹0</span></div>
+        <div class="sum-row"><span>Delivery</span><span id="dr-delivery">₹0</span></div>
+        <div class="sum-row"><span>Platform Fee</span><span id="dr-platform">₹5</span></div>
+        <div class="sum-row"><span>CGST (4%)</span><span id="dr-cgst">₹0</span></div>
+        <div class="sum-row"><span>SGST (4%)</span><span id="dr-sgst">₹0</span></div>
+        <div id="cartOfferBox" class="cart-offer-box" style="margin:14px 0;padding:14px;border:1px dashed var(--tomato);border-radius:14px;background:#fff8ef;">
+          <div style="font-weight:800;margin-bottom:8px;">🎁 Offers</div>
+          <div id="cartOfferList"></div>
+        </div></div>
+        <div class="sum-row total"><span>TOTAL</span><span id="dr-total">₹0</span></div>
+        <button id="proceedCheckoutBtn" type="button" class="checkout-btn" aria-label="Proceed to Checkout" onclick="proceedToCheckout()" style="width:100%;margin-top:12px;padding:14px 18px;border:0;border-radius:999px;background:var(--char);color:var(--mozz);font-weight:800;font-size:15px;cursor:pointer;">
+          Proceed to Checkout →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDop6He3RiDrMQQlG4t3VGTjABmkoaHIqo&libraries=geometry&callback=initPizzaHouseGoogleMaps"></script>
+  <script src="script.js"></script>
+  
+</body>
+</html>
