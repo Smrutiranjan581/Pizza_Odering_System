@@ -1,4 +1,4 @@
-const API_URL = "https://pizza-odering.onrender.com";
+const API_URL = "https://pizza-odering-system-1.onrender.com";
 window.googleMapsReady=false;
 window.initPizzaHouseGoogleMaps=function(){
   window.googleMapsReady=true;
@@ -848,7 +848,7 @@ async function placeOrder() {
   try {
 
     const response =
-      await fetch(`${API_URL}/orders`, {
+      await fetch(`${'https://pizza-odering-system-1.onrender.com'}/orders`, {
 
         method: "POST",
 
@@ -1156,7 +1156,7 @@ async function signupUser() {
   }
 
   try {
-    const response = await fetch(`${API_URL}/api/signup`, {
+    const response = await fetch(`${'https://pizza-odering-system-1.onrender.com'}/api/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1511,7 +1511,7 @@ async function trackOrder() {
 
     const response =
       await fetch(
-        `${API_URL}/orders/${encodeURIComponent(orderId)}`,
+        `${'https://pizza-odering-system-1.onrender.com'}/api/orders/${encodeURIComponent(orderId)}`,
         {
           headers: {
             "Authorization":
@@ -1642,7 +1642,7 @@ async function showMyOrders() {
 
     try {
 
-        const response = await fetch(`${API_URL}/api/my-orders`, {
+        const response = await fetch(`${'https://pizza-odering-system-1.onrender.com'}/api/my-orders`, {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
@@ -1768,7 +1768,7 @@ async function showMyOrders() {
     try {
 
         const response =
-            await fetch(`${API_URL}/my-orders`, {
+            await fetch(`${'https://pizza-odering-system-1.onrender.com'}/api/my-orders`, {
 
                 headers: {
                     "Authorization":
