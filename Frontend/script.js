@@ -1,4 +1,4 @@
-const API_URL = "https://pizza-odering-system.onrender.com";
+const API_URL = "https://pizza-odering.onrender.com";
 window.googleMapsReady=false;
 window.initPizzaHouseGoogleMaps=function(){
   window.googleMapsReady=true;
@@ -1642,7 +1642,7 @@ async function showMyOrders() {
 
     try {
 
-        const response = await fetch(`${API_URL}/my-orders`, {
+        const response = await fetch(`${API_URL}/api/my-orders`, {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
