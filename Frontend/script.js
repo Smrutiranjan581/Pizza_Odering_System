@@ -1,8 +1,8 @@
-const API_URL = "";
+const API_URL = "https://pizza-odering-system.onrender.com/";
 window.googleMapsReady=false;
 window.initPizzaHouseGoogleMaps=function(){
   window.googleMapsReady=true;
-  if(typeof showHomeTrackingAfterOrder==='function') showHomeTrackingAfterOrder();
+  if(typeof showHomeTrackingAfterOrder==="function") showHomeTrackingAfterOrder();
 };
 
 /* ---------------- Data ---------------- */
