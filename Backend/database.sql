@@ -2,7 +2,7 @@
 
 USE sql12836276;
 
-CREATE TABLE users (
+CREATE TABLE pizza_users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     mobile VARCHAR(15) NOT NULL UNIQUE,
@@ -11,7 +11,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE orders (
+CREATE TABLE pizza_orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id VARCHAR(30) NOT NULL UNIQUE,
     user_id INT NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE orders (
         ON DELETE CASCADE
 );
 
-CREATE TABLE order_items (
+CREATE TABLE pizza_order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
     item_name VARCHAR(150) NOT NULL,
