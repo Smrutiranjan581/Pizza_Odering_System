@@ -498,9 +498,9 @@ window.addEventListener('load',()=>{
         <a href="#offers" onclick="showPage('home')">Offers</a>
       </div>
       <div class="footer-col">
-        <h5>Legal</h5>
-        <a href="#" onclick="showToast('Terms — coming soon')">Terms &amp; Conditions</a>
-        <a href="#" onclick="showToast('Privacy — coming soon')">Privacy Policy</a>
+        <h4>Legal</h4>
+        <a href="#" onclick="openLegalModal('terms'); return false;">Terms &amp; Conditions</a>
+        <a href="#" onclick="openLegalModal('privacy'); return false;">Privacy Policy</a>
       </div>
     </div>
     <div class="footer-bottom">
@@ -807,6 +807,72 @@ window.addEventListener('load',()=>{
 
   <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initPizzaHouseGoogleMaps" async defer></script>
   <script src="script.js"></script>
+
+  <!-- ================= LEGAL MODAL ================= -->
+
+<div class="legal-modal" id="legalModal">
+
+  <div class="legal-overlay" onclick="closeLegalModal()"></div>
+
+  <div class="legal-modal-box">
+
+    <!-- Header -->
+    <div class="legal-modal-header">
+
+      <div class="legal-modal-title-area">
+
+        <div class="legal-modal-icon" id="legalIcon">
+          📜
+        </div>
+
+        <div>
+          <span class="legal-label">PIZZA HOUSE • LEGAL</span>
+
+          <h2 id="legalTitle">
+            Terms & Conditions
+          </h2>
+        </div>
+
+      </div>
+
+      <button
+        class="legal-close"
+        onclick="closeLegalModal()"
+        aria-label="Close">
+
+        ✕
+      </button>
+
+    </div>
+
+
+    <!-- Content -->
+    <div class="legal-modal-content" id="legalContent">
+
+      <!-- JavaScript content automatically insert kariba -->
+
+    </div>
+
+
+    <!-- Footer -->
+    <div class="legal-modal-footer">
+
+      <span>
+        🍕 Pizza House • Last updated: September 2026
+      </span>
+
+      <button
+        class="legal-understood"
+        onclick="closeLegalModal()">
+
+        ✓ I Understand
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
   
 </body>
 </html>
