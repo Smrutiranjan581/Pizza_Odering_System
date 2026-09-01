@@ -1,6 +1,6 @@
-CREATE DATABASE pizza_house;
+-- CREATE DATABASE pizza_house; --
 
-USE pizza_house;
+USE sql12836276;
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,

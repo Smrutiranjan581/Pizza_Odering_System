@@ -10,6 +10,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ================= DATABASE CONNECTION =================
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 4000),
@@ -25,9 +27,13 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
+// ================= HOME ROUTE =================
+
 app.get("/", (req, res) => {
   res.send("Pizza House Backend Running");
 });
+
+// ================= AUTH MIDDLEWARE =================
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -39,6 +45,12 @@ function authenticateToken(req, res, next) {
   }
 
   const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({
+      message: "Access denied. Token missing."
+    });
+  }
 
   try {
     const user = jwt.verify(token, process.env.JWT_SECRET);
@@ -64,7 +76,7 @@ app.post("/api/signup", async (req, res) => {
     }
 
     const [existingUsers] = await pool.execute(
-      "SELECT id FROM users WHERE mobile = ? OR email = ?",
+      "SELECT id FROM pizza_users WHERE mobile = ? OR email = ?",
       [mobile, email || null]
     );
 
@@ -77,7 +89,7 @@ app.post("/api/signup", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await pool.execute(
-      `INSERT INTO users (name, mobile, email, password)
+      `INSERT INTO pizza_users (name, mobile, email, password)
        VALUES (?, ?, ?, ?)`,
       [name, mobile, email || null, hashedPassword]
     );
@@ -88,7 +100,7 @@ app.post("/api/signup", async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Signup Error:", error);
 
     res.status(500).json({
       message: "Signup failed."
@@ -102,8 +114,14 @@ app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required."
+      });
+    }
+
     const [users] = await pool.execute(
-      "SELECT * FROM users WHERE email = ?",
+      "SELECT * FROM pizza_users WHERE email = ?",
       [email]
     );
 
@@ -150,7 +168,7 @@ app.post("/api/login", async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Login Error:", error);
 
     res.status(500).json({
       message: "Login failed."
@@ -187,7 +205,7 @@ app.post("/api/orders", authenticateToken, async (req, res) => {
       "PH" + Date.now().toString().slice(-8);
 
     const [orderResult] = await connection.execute(
-      `INSERT INTO orders
+      `INSERT INTO pizza_orders
       (
         order_id,
         user_id,
@@ -209,7 +227,7 @@ app.post("/api/orders", authenticateToken, async (req, res) => {
 
     for (const item of items) {
       await connection.execute(
-        `INSERT INTO order_items
+        `INSERT INTO pizza_order_items
         (
           order_id,
           item_name,
@@ -265,7 +283,7 @@ app.get(
 
       const [orders] = await pool.execute(
         `SELECT *
-         FROM orders
+         FROM pizza_orders
          WHERE order_id = ?
          AND user_id = ?`,
         [orderId, req.user.id]
@@ -285,7 +303,7 @@ app.get(
           item_meta,
           quantity,
           unit_price
-         FROM order_items
+         FROM pizza_order_items
          WHERE order_id = ?`,
         [order.id]
       );
@@ -297,7 +315,7 @@ app.get(
       });
 
     } catch (error) {
-      console.error(error);
+      console.error("Track Order Error:", error);
 
       res.status(500).json({
         message: "Server error."
@@ -315,7 +333,7 @@ app.get(
     try {
       const [orders] = await pool.execute(
         `SELECT *
-         FROM orders
+         FROM pizza_orders
          WHERE user_id = ?
          ORDER BY created_at DESC`,
         [req.user.id]
@@ -326,7 +344,7 @@ app.get(
       });
 
     } catch (error) {
-      console.error(error);
+      console.error("My Orders Error:", error);
 
       res.status(500).json({
         message: "Server error."
