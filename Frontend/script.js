@@ -848,7 +848,7 @@ async function placeOrder() {
   try {
 
     const response =
-      await fetch(`${'API_URL'}/orders`, {
+      await fetch(`${API_URL}/api/orders`, {
 
         method: "POST",
 
