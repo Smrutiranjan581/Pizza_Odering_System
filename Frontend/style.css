@@ -1474,3 +1474,25 @@ footer{background:var(--char);color:rgba(255,252,245,.7);padding:56px 0 26px;}
   }
 
 }
+
+.legal-link{
+  display:block;
+  width:100%;
+  padding:0;
+  margin:0 0 12px;
+  border:none;
+  background:transparent;
+
+  color:rgba(255,252,245,.65);
+  font-size:13.5px;
+  font-family:inherit;
+  text-align:left;
+
+  cursor:pointer;
+  transition:all .25s ease;
+}
+
+.legal-link:hover{
+  color:#fff;
+  transform:translateX(5px);
+}
