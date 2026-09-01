@@ -273,13 +273,96 @@ window.addEventListener('load',()=>{
     </div>
   </section>
 
-  <section id="contact">
-    <div class="wrap" style="max-width:600px;">
-      <p class="eyebrow">Contact</p>
-      <h2 class="section-title">Get in touch</h2>
-      <p class="section-sub" style="max-width:none;">📞 +91 8984729224 &nbsp;·&nbsp; 📧 support@pizzahouse.example &nbsp;·&nbsp; <br>📍 Bhubaneswar, Odisha</p>
+  <section id="contact" class="contact-section">
+  <div class="wrap">
+
+    <div class="contact-header">
+      <div>
+        <p class="eyebrow">Contact</p>
+
+        <h2 class="section-title">
+          Let's talk about your next <span>pizza order.</span>
+        </h2>
+
+        <p class="contact-description">
+          Have a question, need help with an order, or want to know more
+          about Pizza House? Our team is always ready to help you.
+        </p>
+      </div>
+
+      <div class="contact-badge">
+        <span class="contact-status-dot"></span>
+        We're online
+      </div>
     </div>
-  </section>
+
+
+    <div class="contact-grid">
+
+      <!-- Phone -->
+      <a href="tel:+918984729224" class="contact-card">
+        <div class="contact-icon">📞</div>
+
+        <div class="contact-info">
+          <span>Call Us</span>
+          <h3>+91 8984729224</h3>
+          <p>Available for order support</p>
+        </div>
+
+        <div class="contact-arrow">→</div>
+      </a>
+
+
+      <!-- Email -->
+      <a href="mailto:support@pizzahouse.example" class="contact-card">
+        <div class="contact-icon">✉️</div>
+
+        <div class="contact-info">
+          <span>Email Us</span>
+          <h3>support@pizzahouse.example</h3>
+          <p>We'll get back to you soon</p>
+        </div>
+
+        <div class="contact-arrow">→</div>
+      </a>
+
+
+      <!-- Location -->
+      <div class="contact-card">
+        <div class="contact-icon">📍</div>
+
+        <div class="contact-info">
+          <span>Visit Us</span>
+          <h3>Bhubaneswar, Odisha</h3>
+          <p>Fresh pizza, made every day</p>
+        </div>
+      </div>
+
+    </div>
+
+
+    <div class="contact-bottom">
+
+      <div class="contact-hours">
+        <div class="hours-icon">🕒</div>
+
+        <div>
+          <strong>Opening Hours</strong>
+          <span>Every day · 10:00 AM – 11:00 PM</span>
+        </div>
+      </div>
+
+
+      <button class="btn btn-tomato contact-order-btn"
+        onclick="scrollToSection('menu')">
+
+        🍕 Order Pizza Now
+      </button>
+
+    </div>
+
+  </div>
+</section>
 
 </div>
 
