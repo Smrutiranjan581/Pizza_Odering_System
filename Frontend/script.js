@@ -1862,3 +1862,247 @@ function trackHistoryOrder(orderId) {
 
     }, 300);
 }
+
+/* =========================================
+   TERMS & PRIVACY MODAL
+========================================= */
+
+const legalModal = document.getElementById("legalModal");
+const legalTitle = document.getElementById("legalTitle");
+const legalContent = document.getElementById("legalContent");
+const legalIcon = document.getElementById("legalIcon");
+
+
+const termsContent = `
+
+  <div class="legal-highlight">
+    🍕 By using Pizza House, you agree to follow these Terms & Conditions.
+    Please read them carefully before placing an order.
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">01</span>
+      Acceptance of Terms
+    </h3>
+
+    <p>
+      By accessing our website, creating an account, or placing an order,
+      you agree to comply with these Terms & Conditions.
+    </p>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">02</span>
+      Orders & Payments
+    </h3>
+
+    <ul>
+      <li>All orders are subject to availability.</li>
+      <li>Prices may change without prior notice.</li>
+      <li>Please verify your order before placing it.</li>
+      <li>Payment must be completed according to the selected payment method.</li>
+    </ul>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">03</span>
+      Delivery
+    </h3>
+
+    <p>
+      Delivery times may vary depending on location, traffic, weather,
+      restaurant workload, and other operational conditions.
+    </p>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">04</span>
+      Cancellations & Refunds
+    </h3>
+
+    <p>
+      Cancellation and refund eligibility may depend on the preparation
+      status of your order and the applicable payment method.
+    </p>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">05</span>
+      User Responsibilities
+    </h3>
+
+    <p>
+      Users must provide accurate contact, delivery, and account information.
+      Misuse of the website may result in account restrictions.
+    </p>
+
+  </div>
+`;
+
+
+const privacyContent = `
+
+  <div class="legal-highlight">
+    🔒 Your privacy matters to Pizza House. We collect only the information
+    required to provide a better ordering experience.
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">01</span>
+      Information We Collect
+    </h3>
+
+    <ul>
+      <li>Name and contact information.</li>
+      <li>Email address and mobile number.</li>
+      <li>Delivery address and order details.</li>
+      <li>Account information required for authentication.</li>
+    </ul>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">02</span>
+      How We Use Your Information
+    </h3>
+
+    <p>
+      Your information is used to process orders, manage your account,
+      provide customer support, and improve our services.
+    </p>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">03</span>
+      Data Security
+    </h3>
+
+    <p>
+      We take reasonable measures to protect your information and maintain
+      secure access to your account and ordering data.
+    </p>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">04</span>
+      Information Sharing
+    </h3>
+
+    <p>
+      We do not sell your personal information. Information may only be
+      shared when necessary to process and deliver your order.
+    </p>
+
+  </div>
+
+
+  <div class="legal-section">
+
+    <h3>
+      <span class="legal-number">05</span>
+      Your Control
+    </h3>
+
+    <p>
+      You may contact Pizza House for questions regarding your account
+      information or privacy concerns.
+    </p>
+
+  </div>
+`;
+
+
+/* OPEN MODAL */
+
+function openLegalModal(type){
+
+  legalModal.classList.add("active");
+
+  document.body.style.overflow = "hidden";
+
+
+  if(type === "terms"){
+
+    legalTitle.textContent =
+      "Terms & Conditions";
+
+    legalIcon.textContent =
+      "📜";
+
+    legalContent.innerHTML =
+      termsContent;
+
+  }
+
+
+  if(type === "privacy"){
+
+    legalTitle.textContent =
+      "Privacy Policy";
+
+    legalIcon.textContent =
+      "🔒";
+
+    legalContent.innerHTML =
+      privacyContent;
+
+  }
+
+}
+
+
+/* CLOSE MODAL */
+
+function closeLegalModal(){
+
+  legalModal.classList.remove("active");
+
+  document.body.style.overflow = "";
+
+}
+
+
+/* ESC KEY */
+
+document.addEventListener("keydown", function(event){
+
+  if(event.key === "Escape"){
+
+    closeLegalModal();
+
+  }
+
+});
