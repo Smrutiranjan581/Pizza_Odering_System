@@ -7,6 +7,8 @@ require("dotenv").config();
 
 const app = express();
 
+// ================= MIDDLEWARE =================
+
 app.use(cors());
 app.use(express.json());
 
@@ -14,17 +16,14 @@ app.use(express.json());
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT || 4000),
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  ssl: {
-    minVersion: "TLSv1.2"
-  },
-
   waitForConnections: true,
-  connectionLimit: 10
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 // ================= HOME ROUTE =================
@@ -274,84 +273,76 @@ app.post("/api/orders", authenticateToken, async (req, res) => {
 
 // ================= TRACK ORDER =================
 
-app.get(
-  "/api/orders/:orderId",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const { orderId } = req.params;
+app.get("/api/orders/:orderId", authenticateToken, async (req, res) => {
+  try {
+    const { orderId } = req.params;
 
-      const [orders] = await pool.execute(
-        `SELECT *
-         FROM pizza_orders
-         WHERE order_id = ?
-         AND user_id = ?`,
-        [orderId, req.user.id]
-      );
+    const [orders] = await pool.execute(
+      `SELECT *
+       FROM pizza_orders
+       WHERE order_id = ?
+       AND user_id = ?`,
+      [orderId, req.user.id]
+    );
 
-      if (orders.length === 0) {
-        return res.status(404).json({
-          message: "Invalid Order ID."
-        });
-      }
-
-      const order = orders[0];
-
-      const [items] = await pool.execute(
-        `SELECT
-          item_name,
-          item_meta,
-          quantity,
-          unit_price
-         FROM pizza_order_items
-         WHERE order_id = ?`,
-        [order.id]
-      );
-
-      res.json({
-        message: "Order found!",
-        order,
-        items
-      });
-
-    } catch (error) {
-      console.error("Track Order Error:", error);
-
-      res.status(500).json({
-        message: "Server error."
+    if (orders.length === 0) {
+      return res.status(404).json({
+        message: "Invalid Order ID."
       });
     }
+
+    const order = orders[0];
+
+    const [items] = await pool.execute(
+      `SELECT
+        item_name,
+        item_meta,
+        quantity,
+        unit_price
+       FROM pizza_order_items
+       WHERE order_id = ?`,
+      [order.id]
+    );
+
+    res.json({
+      message: "Order found!",
+      order,
+      items
+    });
+
+  } catch (error) {
+    console.error("Track Order Error:", error);
+
+    res.status(500).json({
+      message: "Server error."
+    });
   }
-);
+});
 
 // ================= MY ORDERS =================
 
-app.get(
-  "/api/my-orders",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const [orders] = await pool.execute(
-        `SELECT *
-         FROM pizza_orders
-         WHERE user_id = ?
-         ORDER BY created_at DESC`,
-        [req.user.id]
-      );
+app.get("/api/my-orders", authenticateToken, async (req, res) => {
+  try {
+    const [orders] = await pool.execute(
+      `SELECT *
+       FROM pizza_orders
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [req.user.id]
+    );
 
-      res.json({
-        orders
-      });
+    res.json({
+      orders
+    });
 
-    } catch (error) {
-      console.error("My Orders Error:", error);
+  } catch (error) {
+    console.error("My Orders Error:", error);
 
-      res.status(500).json({
-        message: "Server error."
-      });
-    }
+    res.status(500).json({
+      message: "Server error."
+    });
   }
-);
+});
 
 // ================= START SERVER =================
 
@@ -359,5 +350,5 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log("Pizza House Backend Running");
-  console.log(`http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
